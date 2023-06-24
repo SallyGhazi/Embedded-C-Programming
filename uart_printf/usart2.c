@@ -6,7 +6,7 @@
 
 #define SYS_FREQ       16000000
 #define APB1_CLK       SYS_FREQ
-#define UART_BAUDRATE  115200
+#define UART_BAUDRATE  9600
 
 //initialize the pointers for the registers
 uint32_t *portaAHB1ENR = (uint32_t*)0x40023830; //RCC registers
@@ -20,8 +20,14 @@ uint32_t *USART2_CR1   = (uint32_t*)0x4000440C;
 
 void uart2_tx_init(void);
 static uint16_t compute_uart_bd(uint32_t PeriphClk,uint32_t Baudrate);
-void uart2_write(int ch);
+void uart2_write(char ch);
 
+int __io_putchar(char ch)
+{
+	uart2_write(ch);
+	return ch;
+
+}
 
 int main(void)
 {
@@ -31,15 +37,23 @@ int main(void)
 	uart2_tx_init();
 	while(1)
 	{
-		uart2_write('A');
+		//uart2_write("A\r\n");
+		printf("Hello World..\r\n");
 	}
+
+	return 0;
 
 }
 void uart2_tx_init(void)
 {
 	//Enable clock access to GPIOA
 	*portaAHB1ENR = GPIOAEN;
+
+	//Enable Clock Access for USART2
+	*APB1ENR |= (1U<<17);
+
 	//SET PA2 MOODE TO Alternate function Mode
+	*GPIOA_MODER |=  (1U<<5);
 	*GPIOA_MODER  &=~ (1U<<4);
 	//SET PA2 Alternative function type to UART_TX (AF07)
 	*GPIOA_AFRL |= (1U<<8);
@@ -59,7 +73,7 @@ static uint16_t compute_uart_bd(uint32_t PeriphClk,uint32_t Baudrate)
 {
 	return((PeriphClk+(Baudrate/2U))/Baudrate);
 }
-void uart2_write(int ch)
+void uart2_write(char ch)
 {
 	//Make sure the transmit data register is empty
 	while(!(*USART2_SR & 0x0080)){}
